@@ -119,6 +119,7 @@ fi
 
 GET_INPUT(){
 unset inputs
+old_rs_lan="${rs_lan}"
 while [[ ! ${inputs} =~ ^[0-5qQa]+$ ]]; do
 printf "\033[?25l"
 if [[ $loc = "ru" ]]; then             
@@ -131,11 +132,15 @@ printf "\033[4A"
 printf "\r\033[46C"
 printf "\033[?25h"
 SET_INPUT
-read -rsn1 -t1 inputs 
+CHECK_UPDATE_SHARINGD
+if [[ "${rs_lan}" = "${old_rs_lan}" ]]; then 
+read -rsn1 -t2 inputs 
+else 
+old_rs_lan="${rs_lan}"; inputs=0
+fi
 printf "\r"
 done
 printf "\033[?25l"
-
 }
 
 CHECK_UPDATE_SHARINGD(){
@@ -209,16 +214,18 @@ fi
 printf ' %.0s' {1..80}
 }
 
-
+SET_TIMER(){
+if [[ -f ~/Library/Application\ Support/UpdateSharing/timer.txt ]]; then timer=$( cat ~/Library/Application\ Support/UpdateSharing/timer.txt )
+    else
+        timer=15
+        echo ${timer} >> ~/Library/Application\ Support/UpdateSharing/timer.txt
+fi
+}
 
 ######################################## MAIN ##########################################################################################
 free_lines=8
 var4=0
-if [[ -f ~/Library/Application\ Support/UpdateSharing/timer.txt ]]; then 
-    timer=$( cat ~/Library/Application\ Support/UpdateSharing/timer.txt )
-    else
-    timer=15
-fi
+
 while [[ ! $var4 = 1 ]] 
 do
 printf '\e[3J' && printf "\033[0;0H" 
@@ -243,11 +250,9 @@ if [[ $inputs = 1 ]]; then
                 plutil -remove ProgramArguments.0 ~/Library/LaunchAgents/UpdateSharing.plist
                 plutil -insert ProgramArguments.0 -string "/Users/$(whoami)/.UpdateSharing.sh" ~/Library/LaunchAgents/UpdateSharing.plist
                 if [[ ! -f ~/.UpdateSharing.sh ]]; then cp -a tools/UpdateSharing.sh ~/.UpdateSharing.sh; chmod u+x ~/.UpdateSharing.sh; fi
-                if [[ ! $rs_lan = "работает" ]]; then launchctl load -w ~/Library/LaunchAgents/UpdateSharing.plist; fi
                 if [[ ! -d ~/Library/Application\ Support/UpdateSharing ]]; then mkdir  ~/Library/Application\ Support/UpdateSharing; fi
+                if [[ ! $rs_lan = "работает" ]]; then  SET_TIMER; launchctl load -w ~/Library/LaunchAgents/UpdateSharing.plist; fi
                 cp -a tools/terminal-notifier.app ~/Library/Application\ Support/UpdateSharing
-                touch ~/Library/Application\ Support/UpdateSharing/timer.txt
-                echo $timer >> ~/Library/Application\ Support/UpdateSharing/timer.txt
            else
                 printf '\n   Не найдены файлы для установки. Поместите их в папку tools с установщиком\n'
                 printf '\n'
@@ -262,8 +267,8 @@ if [[ $inputs = 1 ]]; then
                 plutil -remove ProgramArguments.0 ~/Library/LaunchAgents/UpdateSharing.plist
                 plutil -insert ProgramArguments.0 -string "/Users/$(whoami)/.UpdateSharing.sh" ~/Library/LaunchAgents/UpdateSharing.plist
                 if [[ ! -f ~/.UpdateSharing.sh ]]; then cp -a tools/UpdateSharing.sh ~/.UpdateSharing.sh; chmod u+x ~/.UpdateSharing.sh; fi
-                if [[ ! $rs_lan = "started" ]]; then launchctl load -w ~/Library/LaunchAgents/UpdateSharing.plist; fi
                 if [[ ! -d ~/Library/Application\ Support/UpdateSharing ]]; then mkdir  ~/Library/Application\ Support/UpdateSharing; fi
+                if [[ ! $rs_lan = "started" ]]; then  SET_TIMER; launchctl load -w ~/Library/LaunchAgents/UpdateSharing.plist; fi
                 cp -a tools/terminal-notifier.app ~/Library/Application\ Support/UpdateSharing
            else
                 printf '\n   No installation files found. Put them in the installer tools folder      \n'
